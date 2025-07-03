@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Responsive Quiz App</title>
+ <style>
+  * {
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #74ebd5, #acb6e5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .container {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    padding: 30px;
+    border-radius: 20px;
+    max-width: 550px;
+    width: 100%;
+    transition: all 0.3s ease;
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  h1, h2, h3 {
+    text-align: center;
+    color: #333;
+  }
+
+  #question {
+    margin-bottom: 20px;
+    font-size: 1.25rem;
+  }
+
+  .btn {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 14px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background: #f0f0f0;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .btn:hover {
+    background: #d9e4f5;
+    transform: translateY(-2px);
+  }
+
+  .btn.correct {
+    background-color: #c8e6c9;
+    color: #2e7d32;
+  }
+
+  .btn.wrong {
+    background-color: #ffcdd2;
+    color: #c62828;
+  }
+
+  #next-btn, #restart-btn {
+    margin-top: 20px;
+    padding: 12px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+
+  #next-btn:hover, #restart-btn:hover {
+    background-color: #0056b3;
+  }
+
+  #score {
+    margin-top: 15px;
+    font-weight: bold;
+    font-size: 1rem;
+    text-align: center;
+    color: #333;
+  }
+
+  #timer {
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: center;
+    font-size: 1rem;
+    color: #222;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 10px;
+    background: #e0e0e0;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .progress {
+    height: 100%;
+    background: #007bff;
+    width: 0%;
+    border-radius: 5px;
+    transition: width 0.3s ease;
+  }
+
+  .start-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: fadeIn 0.6s ease-in-out;
+  }
+
+  .start-screen h1 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #222;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  ul {
+    list-style-type: none;
+    padding: 0;
+    color: #444;
+  }
+
+  ul li {
+    background: #f8f8f8;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+
+  @media (max-width: 500px) {
+    .container {
+      padding: 20px;
+      border-radius: 15px;
+    }
+
+    .btn {
+      padding: 12px;
+      font-size: 0.95rem;
+    }
+
+    #next-btn, #restart-btn {
+      font-size: 0.95rem;
+    }
+
+    h1, h2 {
+      font-size: 1.3rem;
+    }
+
+    #question {
+      font-size: 1.1rem;
+    }
+  }
+</style>
+
+</head>
+<body>
+
+  <div class="container" id="start-screen">
+    <div class="start-screen">
+      <h1>🧠 Ready to test your brain?</h1>
+      <button class="btn" onclick="startQuiz()">Start Quiz</button>
+    </div>
+  </div>
+
+  <div class="container hidden" id="quiz-container">
+    <div id="timer">⏱️ Time left: <span id="time">15</span>s</div>
+    <div class="progress-bar"><div class="progress" id="progress"></div></div>
+    <h2 id="question">💡 Question text</h2>
+    <div id="answer-buttons"></div>
+    <button id="next-btn">Next</button>
+    <div id="score"></div>
+    <button id="restart-btn" style="display: none;">Restart Quiz</button>
+  </div>
+
+  <!-- 🔊 Sounds -->
+  <audio id="correct-sound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+  <audio id="wrong-sound" src="https://www.soundjay.com/button/beep-10.wav"></audio>
+  <audio id="timeout-sound" src="https://www.soundjay.com/button/beep-05.wav"></audio>
+
+ <script>
+  const questions = [
+    { question: "What does HTML stand for?", answers: [
+      { text: "Hyperlinks and Text Markup Language", correct: false },
+      { text: "Hyper Text Markup Language", correct: true },
+      { text: "Home Tool Markup Language", correct: false },
+      { text: "Hyper Tool Markup Language", correct: false }
+    ]},
+    { question: "Which CSS property controls text size?", answers: [
+      { text: "font-style", correct: false },
+      { text: "text-size", correct: false },
+      { text: "font-size", correct: true },
+      { text: "text-style", correct: false }
+    ]},
+    { question: "Which tag includes JavaScript?", answers: [
+      { text: "<style>", correct: false },
+      { text: "<js>", correct: false },
+      { text: "<script>", correct: true },
+      { text: "<link>", correct: false }
+    ]},
+    { question: "CSS stands for?", answers: [
+      { text: "Creative Style Sheets", correct: false },
+      { text: "Cascading Style Sheets", correct: true },
+      { text: "Colorful Style Sheets", correct: false },
+      { text: "Computer Style Sheets", correct: false }
+    ]},
+    { question: "JavaScript is a ___ language.", answers: [
+      { text: "Programming", correct: true },
+      { text: "Markup", correct: false },
+      { text: "Styling", correct: false },
+      { text: "Server", correct: false }
+    ]},
+    { question: "Which HTML tag is used to make bold text?", answers: [
+      { text: "<strong>", correct: true },
+      { text: "<bld>", correct: false },
+      { text: "<bold>", correct: false },
+      { text: "<style>", correct: false }
+    ]},
+    { question: "What symbol is used for comments in CSS?", answers: [
+      { text: "// comment", correct: false },
+      { text: "<!-- comment -->", correct: false },
+      { text: "/* comment */", correct: true },
+      { text: "# comment", correct: false }
+    ]},
+    { question: "Which method is used to output data in JavaScript?", answers: [
+      { text: "print()", correct: false },
+      { text: "echo()", correct: false },
+      { text: "console.log()", correct: true },
+      { text: "display()", correct: false }
+    ]},
+    { question: "Which keyword declares a variable in JavaScript?", answers: [
+      { text: "var", correct: true },
+      { text: "define", correct: false },
+      { text: "int", correct: false },
+      { text: "variable", correct: false }
+    ]},
+    { question: "What does DOM stand for?", answers: [
+      { text: "Document Object Model", correct: true },
+      { text: "Data Object Model", correct: false },
+      { text: "Document Orientation Model", correct: false },
+      { text: "Display Object Manager", correct: false }
+    ]}
+  ];
+
+  let currentQuestionIndex = 0;
+  let score = 0;
+  let timer;
+  let timeLeft = 15;
+
+  const startScreen = document.getElementById('start-screen');
+  const quizContainer = document.getElementById('quiz-container');
+  const questionElement = document.getElementById('question');
+  const answerButtons = document.getElementById('answer-buttons');
+  const nextButton = document.getElementById('next-btn');
+  const restartButton = document.getElementById('restart-btn');
+  const scoreDisplay = document.getElementById('score');
+  const timerDisplay = document.getElementById('time');
+  const progress = document.getElementById('progress');
+  const correctSound = document.getElementById('correct-sound');
+  const wrongSound = document.getElementById('wrong-sound');
+  const timeoutSound = document.getElementById('timeout-sound');
+
+  function startQuiz() {
+    startScreen.classList.add('hidden');
+    quizContainer.classList.remove('hidden');
+    currentQuestionIndex = 0;
+    score = 0;
+    nextButton.innerText = "Next";
+    restartButton.style.display = 'none';
+    localStorage.setItem("quizHistory", JSON.stringify([])); // clear history
+    showQuestion();
+  }
+
+  function showQuestion() {
+    resetState();
+    startTimer();
+    const currentQuestion = questions[currentQuestionIndex];
+    questionElement.innerText = `💡 ${currentQuestion.question}`;
+    currentQuestion.answers.forEach(answer => {
+      const button = document.createElement("button");
+      button.innerText = answer.text;
+      button.classList.add("btn");
+      if (answer.correct) button.dataset.correct = answer.correct;
+      button.addEventListener("click", selectAnswer);
+      answerButtons.appendChild(button);
+    });
+    updateProgress();
+  }
+
+  function resetState() {
+    clearInterval(timer);
+    timeLeft = 15;
+    timerDisplay.innerText = timeLeft;
+    nextButton.style.display = "none";
+    answerButtons.innerHTML = "";
+    scoreDisplay.innerHTML = "";
+  }
+
+  function selectAnswer(e) {
+    clearInterval(timer);
+    const selectedBtn = e.target;
+    const isCorrect = selectedBtn.dataset.correct === "true";
+    selectedBtn.classList.add(isCorrect ? "correct" : "wrong");
+    isCorrect ? correctSound.play() : wrongSound.play();
+    if (isCorrect) score++;
+
+    // Save attempt to localStorage
+    saveAttempt(questions[currentQuestionIndex], selectedBtn.innerText, isCorrect);
+
+    Array.from(answerButtons.children).forEach(btn => {
+      btn.disabled = true;
+      if (btn.dataset.correct === "true") btn.classList.add("correct");
+    });
+    scoreDisplay.innerText = `Current Score: ${score}`;
+    nextButton.style.display = "block";
+  }
+
+  function startTimer() {
+    timer = setInterval(() => {
+      timeLeft--;
+      timerDisplay.innerText = timeLeft;
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        timeoutSound.play();
+        autoSelectAnswer();
+      }
+    }, 1000);
+  }
+
+  function autoSelectAnswer() {
+    Array.from(answerButtons.children).forEach(btn => {
+      btn.disabled = true;
+      btn.classList.add(btn.dataset.correct === "true" ? "correct" : "wrong");
+    });
+    saveAttempt(questions[currentQuestionIndex], "Time Out", false);
+    scoreDisplay.innerText = `Current Score: ${score}`;
+    nextButton.style.display = "block";
+  }
+
+  function updateProgress() {
+    const percent = ((currentQuestionIndex + 1) / questions.length) * 100;
+    progress.style.width = percent + "%";
+  }
+
+  nextButton.addEventListener("click", () => {
+    currentQuestionIndex++;
+    if (currentQuestionIndex < questions.length) {
+      showQuestion();
+    } else {
+      showScore();
+    }
+  });
+
+  restartButton.addEventListener("click", startQuiz);
+
+  function showScore() {
+    clearInterval(timer);
+    questionElement.innerText = "🎉 Quiz Completed!";
+    answerButtons.innerHTML = "";
+    nextButton.style.display = "none";
+    restartButton.style.display = "inline-block";
+    scoreDisplay.innerHTML = `🎯 Your Score: ${score} out of ${questions.length}`;
+    showPreviousAttempts();
+  }
+
+  // ✅ Save attempt to localStorage (max 10)
+  function saveAttempt(question, selectedText, isCorrect) {
+    const attempt = {
+      question: question.question,
+      selected: selectedText,
+      correct: isCorrect
+    };
+    let history = JSON.parse(localStorage.getItem("quizHistory")) || [];
+    history.unshift(attempt); // add to top
+    if (history.length > 10) history = history.slice(0, 10);
+    localStorage.setItem("quizHistory", JSON.stringify(history));
+  }
+
+  // ✅ Show previous 10 attempts
+  function showPreviousAttempts() {
+    const history = JSON.parse(localStorage.getItem("quizHistory")) || [];
+    if (history.length === 0) return;
+
+    const historyHtml = history.map((item, index) => {
+      const status = item.correct ? "✅" : "❌";
+      return `<li style="margin-bottom: 8px;">
+                <strong>${index + 1}. ${item.question}</strong><br/>
+                Your Answer: ${item.selected} ${status}
+              </li>`;
+    }).join("");
+
+    const historyBox = document.createElement("div");
+    historyBox.innerHTML = `
+      <h3>🕓 Your Last 10 Attempts:</h3>
+      <ul style="padding-left: 18px;">${historyHtml}</ul>
+    `;
+    historyBox.style.marginTop = "20px";
+    scoreDisplay.appendChild(historyBox);
+  }
+</script>
+
+</body>
+</html>
